@@ -1,0 +1,50 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+#BackUp File
+*~
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+#CMAKE
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+#DOXYGEN
+*.html
+
+#DATABASE
+*.jpg
+*.png
+
+#MATLAB MEX
+*.mexa64
+
+#MAT file
+*.mat
+
+.cproject
+.gitignore~
+.project
+
