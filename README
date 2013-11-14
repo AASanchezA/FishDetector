@@ -2,7 +2,7 @@ Fish Detector
 This project is related with my Master thesis, which final goal
 is to detect Fish, for fishfarming, and biomass estimation
 for this reason, fish in image have detected , finding boundingbox
-and tlandmarks from the fish.
+and landmarks from the fish.
 
 - this project is basis, in the work
   
