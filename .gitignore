@@ -37,6 +37,8 @@ install_manifest.txt
 #DATABASE
 *.jpg
 *.png
+*.avi
+*.mp4
 
 #MATLAB MEX
 *.mexa64
@@ -44,7 +46,11 @@ install_manifest.txt
 #MAT file
 *.mat
 
+#Eclipse
 .cproject
 .gitignore~
 .project
+
+#Executable
+src/FishDetector
 

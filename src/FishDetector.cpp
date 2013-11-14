@@ -14,9 +14,9 @@
 #include "PartsBasedDetector.hpp"
 #include "Candidate.hpp"
 #include "FileStorageModel.hpp"
-//#ifdef WITH_MATLABIO
+#ifdef WITH_MATLABIO
 	#include "MatlabIOModel.hpp"
-//#endif
+#endif
 #include "Visualize.hpp"
 #include "types.hpp"
 #include "nms.hpp"
@@ -48,6 +48,10 @@ void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
 
 void drawResponse(const std::vector<cv::linemod::Template>& templates,
                   int num_modalities, cv::Mat& dst, cv::Point offset, int T);
+
+void drawBoxes(std::vector<cv::Rect>& boxes, cv::Mat& dst, const float factor=1);
+
+cv::Mat display3(std::vector<cv::Mat>& images);
 
 bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modalities, float threshold, cv::Mat& dst,
 		      cv::Ptr<cv::linemod::Detector>& detHead,
@@ -224,7 +228,7 @@ int main(int argc, char * argv[])
 {
   // Various settings and flags
   bool show_match_result = true;
-  bool show_timings = false;
+  bool show_timings = true;
   bool show_matches = true;
   bool learn_online = false;
   bool savedlmHead = false;
@@ -236,9 +240,9 @@ int main(int argc, char * argv[])
   char key;
   cv::vector<int> num_classes;
 //  int matching_threshold = 88;
-  int matching_threshold_head = 87; //91
-  int matching_threshold_tail = 87; //89
-  int matching_threshold_fish = 76;
+  int matching_threshold_head = 90; //91
+  int matching_threshold_tail = 88; //89
+  int matching_threshold_fish = 79;
   int nrCandidate = 3;
   /// @todo Keys for changing these?
   cv::Size roi_size(100, 100);
@@ -331,17 +335,18 @@ int main(int argc, char * argv[])
     }
   }
 
+
   // determine the type of model to read
   boost::scoped_ptr<Model> model;
   std::string ext = boost::filesystem::path(partBasedModel.c_str()).extension().string();
   if (ext.compare(".xml") == 0 || ext.compare(".yaml") == 0) {
 	  model.reset(new FileStorageModel);
   }
-//#ifdef WITH_MATLABIO
+#ifdef WITH_MATLABIO
   else if (ext.compare(".mat") == 0) {
 	  model.reset(new MatlabIOModel);
   }
-//#endif
+#endif
   else {
 	  printf("Unsupported model format: %s\n", ext.c_str());
 	  exit(-2);
@@ -366,7 +371,20 @@ int main(int argc, char * argv[])
   cv::namedWindow("color");
 //  cv::namedWindow("normals");
   cv::namedWindow("connected");
+//  cv::namedWindow("display3");
   Mouse::start("color");
+
+  //set video parameter
+  const std::string video = "output.avi";   // Form the new name with container
+
+  cv::VideoWriter outputVideo;                                        // Open the output
+  outputVideo.open(video, CV_FOURCC('M','J','P','G'), 5, cv::Size(1920,480), true);
+
+  if (!outputVideo.isOpened())
+  {
+      std::cout  << "Could not open the output video for write: " <<  video.c_str() << std::endl;
+      return -1;
+  }
 
 
   int num_modalities = (int)detHead->getModalities().size();
@@ -382,14 +400,12 @@ int main(int argc, char * argv[])
       return 0;
   }
 
-   // Main loop
+  // Main loop
   cv::Mat color;
 
-//Run over image list
+  //Run over image list
   for (unsigned int  j = 0; j < imagelist.size(); j++)
   {
-
-//	  printf("begin cicle j = %d \n", j);
 
 	  //Read image from imagelist
 	  cv::Mat test = cv::imread(imagelist[j], CV_LOAD_IMAGE_COLOR); // do grayscale processing?
@@ -422,13 +438,17 @@ int main(int argc, char * argv[])
 	  if (candidates.size() > 0) {
 		  Candidate::sort(candidates);
 		  Candidate::nonMaximaSuppression(color, candidates, 0.3);
-		  visualize.candidates(color, candidates, nrCandidate, canvas, true);
+		  visualize.candidates(color, candidates, nrCandidate, 1,canvas, true);
 		  std::cout << "candidate = " << candidates.size() << std::endl;
 		  visualize.image(canvas);
-//		  cv::waitKey();
 	  }
 
-
+	  // draw each candidate to the canvas
+	  cv::Mat maskPB;
+	  std::vector<cv::Rect> boundingBoxes;
+	  Candidate::mask(color, candidates, nrCandidate, 1.4, maskPB, boundingBoxes);
+	  std::vector<cv::Mat> maskLinemod;
+	  maskLinemod.push_back(255*maskPB);
 
 	  // Perform matching
 	  std::vector<cv::linemod::Match>  matchesHead;
@@ -438,8 +458,10 @@ int main(int argc, char * argv[])
 	  std::vector<cv::Mat>  quantized_imagesHead;
 	  std::vector<cv::Mat>  quantized_imagesTail;
 	  match_timer.start();
-	  detHead->match(sources, (float)matching_threshold_head, matchesHead, class_idsHead, quantized_imagesHead);
-	  detTail->match(sources, (float)matching_threshold_tail, matchesTail, class_idsTail, quantized_imagesTail);
+	  detHead->match(sources, (float)matching_threshold_head, matchesHead,
+			  class_idsHead, quantized_imagesHead, maskLinemod);
+	  detTail->match(sources, (float)matching_threshold_tail, matchesTail,
+			  class_idsTail, quantized_imagesTail, maskLinemod);
 
 	  cv::vector<std::vector<cv::linemod::Match> > matches;
 	  matches.push_back(matchesHead);
@@ -457,7 +479,7 @@ int main(int argc, char * argv[])
 	  cv::vector<int> classes_visited;
 	  classes_visited.push_back(0);
 	  classes_visited.push_back(0);
-	  //    cv::vector<std::set<std::string> > visited;
+
 	  std::set<std::string>  visitedHead;
 	  std::set<std::string>  visitedTail;
 
@@ -485,6 +507,7 @@ int main(int argc, char * argv[])
 						  // Draw matching template
 						  const std::vector<cv::linemod::Template>& templatesHead = detHead->getTemplates(m.class_id, m.template_id);
 						  drawResponse(templatesHead, num_modalities, display, cv::Point(m.x, m.y), detHead->getT(0));
+						  drawBoxes(boundingBoxes, display, 0.76);
 						  cv::putText(display, m.class_id, cv::Point(m.x,m.y),
 								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
 					  }
@@ -504,6 +527,7 @@ int main(int argc, char * argv[])
 						  // Draw matching template
 						  const std::vector<cv::linemod::Template>& templatesTail = detTail->getTemplates(m.class_id, m.template_id);
 						  drawResponse(templatesTail, num_modalities, display, cv::Point(m.x, m.y), detTail->getT(0));
+						  drawBoxes(boundingBoxes, display, 0.76);
 						  cv::putText(display, m.class_id, cv::Point(m.x,m.y),
 								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
 					  }
@@ -520,12 +544,10 @@ int main(int argc, char * argv[])
 	  classes_visited[1] = 0;
 
 	  // go through all head matches, and connecting  head-tail
-//	  for (int i = 0; (i < (int)matches[0].size()) && (classes_visited[0] < num_classes[0]); ++i)
 	  for (int i = 0; (i < (int)matches[0].size()); ++i)
 	  {
 		  ++classes_visited[0];
 		  //go through all Tail matches
-//		  for (int j = 0; (j < (int)matches[1].size()) && (classes_visited[1] < num_classes[1]); ++j)
 		  for (int j = 0; (j < (int)matches[1].size()); ++j)
 		  {
 			  ++classes_visited[1];
@@ -547,11 +569,12 @@ int main(int argc, char * argv[])
 
 				  drawResponse(templatesHead, num_modalities, display2, cv::Point(mHead.x, mHead.y), detHead->getT(0));
 				  drawResponse(templatesTail, num_modalities, display2, cv::Point(mTail.x, mTail.y), detTail->getT(0));
+				  drawBoxes(boundingBoxes, display2, 0.76);
 
-				  cv::putText(display2, mHead.class_id, cv::Point(mHead.x,mHead.y),
-						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
-				  cv::putText(display2, mTail.class_id, cv::Point(mTail.x,mTail.y),
-						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
+//				  cv::putText(display2, mHead.class_id, cv::Point(mHead.x,mHead.y),
+//						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
+//				  cv::putText(display2, mTail.class_id, cv::Point(mTail.x,mTail.y),
+//						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
 
 
 				  printf("SimilarityHead: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
@@ -566,7 +589,6 @@ int main(int argc, char * argv[])
 					  cv::waitKey(200);
 				  }
 			  }
-//			  cv::waitKey();
 		  }
 		  //Reinit counter
 		  classes_visited[1] = 0;
@@ -574,6 +596,20 @@ int main(int argc, char * argv[])
 	  //Reinit counter
 	  classes_visited[0] = 0;
 
+	  std::vector<cv::Mat> images3;
+	  images3.push_back(display);
+	  images3.push_back(display2);
+	  images3.push_back(canvas);
+	  cv::Mat im3 = display3(images3);
+//	  cv::imshow("display3", im3);
+	  //outputVideo.write(res); //save or
+	  outputVideo << im3;
+//	  std::stringstream outputImage;
+//	  outputImage << "src/image";
+
+	  char *path = (char *)malloc(100);
+	  sprintf(path,"images/result%.4d.jpg", j);
+	  cv::imwrite(path, im3);
 
     if (show_match_result && matches.empty())
       printf("No matches found...\n");
@@ -596,8 +632,8 @@ int main(int argc, char * argv[])
     if(j == imagelist.size()-2)
     	key = 'w';
 
-    if(j == (imagelist.size()-1))
-    	j = 0;
+//    if(j == (imagelist.size()-1))
+//    	j = 0;
 
     if( key == 'q' )
         break;
@@ -656,13 +692,11 @@ int main(int argc, char * argv[])
         break;
       case 'z':
         // decrement threshold fish
-//        matching_threshold_fish = std::max(matching_threshold_fish - 0.1, (double)(-1));
         matching_threshold_fish = std::max(matching_threshold_fish - 1, -100);
         printf("New threshold head: %d\n", matching_threshold_fish);
         break;
       case 's':
         // increment threshold fish
-//        matching_threshold_fish = std::min(matching_threshold_fish + 0.1, (double)(+1));
         matching_threshold_fish = std::min(matching_threshold_fish + 1, +100);
         printf("New threshold: %d\n", matching_threshold_fish);
         break;
@@ -723,6 +757,7 @@ static void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv
     real[i].z = Z;
   }
 }
+
 
 static void filterPlane(IplImage * ap_depth, std::vector<IplImage *> & a_masks, std::vector<CvPoint> & a_chain, double f)
 {
@@ -900,6 +935,7 @@ static void filterPlane(IplImage * ap_depth, std::vector<IplImage *> & a_masks, 
   cvReleaseMat(&lp_v);
 }
 
+
 void subtractPlane(const cv::Mat& depth, cv::Mat& mask, std::vector<CvPoint>& chain, double f)
 {
   mask = cv::Mat::zeros(depth.size(), CV_8U);
@@ -909,6 +945,7 @@ void subtractPlane(const cv::Mat& depth, cv::Mat& mask, std::vector<CvPoint>& ch
   IplImage depth_ipl = depth;
   filterPlane(&depth_ipl, tmp, chain, f);
 }
+
 
 void subtractPlaneSint(const cv::Mat& color, cv::Mat& mask)
 {
@@ -927,6 +964,7 @@ void subtractPlaneSint(const cv::Mat& color, cv::Mat& mask)
 	cv::imshow("diff", masktmp);
 
 }
+
 
 std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& templates,
                                       int num_modalities, cv::Point offset, cv::Size size,
@@ -974,6 +1012,7 @@ std::vector<CvPoint> maskFromTemplate(const std::vector<cv::linemod::Template>& 
   return l_pts1;
 }
 
+
 std::vector<CvPoint> x(const std::vector<cv::linemod::Template>& templates,
                                       int num_modalities, cv::Point offset, cv::Size size,
                                       cv::Mat& mask, cv::Mat& dst)
@@ -1019,6 +1058,7 @@ std::vector<CvPoint> x(const std::vector<cv::linemod::Template>& templates,
   return l_pts1;
 }
 
+
 // Adapted from cv_show_angles
 cv::Mat displayQuantized(const cv::Mat& quantized)
 {
@@ -1051,6 +1091,7 @@ cv::Mat displayQuantized(const cv::Mat& quantized)
   return color;
 }
 
+
 // Adapted from cv_line_template::convex_hull
 void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
                         int num_modalities, cv::Point offset, cv::Size size,
@@ -1076,6 +1117,7 @@ void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
 //  cv::namedWindow("grabcut");
 //  cv::imshow("grabcut", dst);
 }
+
 
 void drawResponse(const std::vector<cv::linemod::Template>& templates,
                   int num_modalities, cv::Mat& dst, cv::Point offset, int T)
@@ -1133,6 +1175,23 @@ void drawResponse(const std::vector<cv::linemod::Template>& templates,
 	cv::line(dst, axis[1], axis[3], cv::Scalar(255,0,0));
 	index++;
 }
+
+
+void drawBoxes(std::vector<cv::Rect>& boxes, cv::Mat& dst, const float factor)
+{
+	size_t N = boxes.size();
+	for (size_t n = 0; n < N; ++n)
+	{
+		cv::Rect box = boxes[n];
+		box.height *= factor;
+		box.width  *= factor;
+		//redefine upper left conner
+		box.y      += box.height*(1-factor)*0.5;
+		box.x      += box.width*(1-factor)*0.5;
+		cv::rectangle(dst, box, cv::Scalar(255, 0, 0), 2);
+	}
+}
+
 
 
 bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modalities, float threshold, cv::Mat& dst,
@@ -1239,9 +1298,9 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
     float F;
     float alpha[3] = {0.3, 0.3, 0.4};
     float Final;
-    float angleL   = 40;   // angle between template LEFT
-    float angleR   = 140;  // angle between template RIGHT
-    float dist_k   = 80;   // ref distance between template corners
+    float angleL   = 50;   // angle between template LEFT
+    float angleR   = 130;  // angle between template RIGHT
+    float dist_k   = 100;   // ref distance between template corners
     int   scale    = 3;
     int   overlap_k  = 20;
     int   overlap[2];
@@ -1359,6 +1418,7 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
 }
 
 
+
 int findTemplateSide(cv::vector<cv::Point> contour, cv::RotatedRect elipse, cv::Rect rect, cv::Mat& dst, cv::vector<cv::Point>& extrem)
 {
 
@@ -1434,9 +1494,6 @@ int findTemplateSide(cv::vector<cv::Point> contour, cv::RotatedRect elipse, cv::
 	cv::namedWindow("subtractmask");
 	cv::imshow("subtractmask", source[0]);
 }
-
-
-
 
 
 //sort a contour clockwise staring from center of bounding box
@@ -1556,3 +1613,18 @@ int findTemplateSide(cv::vector<cv::Point> contour, cv::RotatedRect elipse, cv::
  }
 
 
+ cv::Mat display3(std::vector<cv::Mat>& images)
+ {
+
+     size_t N = images.size();
+     const int rows = images[0].rows;
+     const int cols = images[0].cols;
+     cv::Mat canvas = ::cv::Mat::zeros(rows, N*cols, CV_8UC3);
+     for (size_t n = 0; n < N; ++n)
+     {
+         cv::Mat imagesColRange = canvas.colRange(n*cols,(n+1)*cols);
+         images[n].copyTo(imagesColRange);
+     }
+
+     return canvas;
+ }
