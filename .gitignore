@@ -39,6 +39,7 @@ install_manifest.txt
 *.png
 *.avi
 *.mp4
+*.yml
 
 #MATLAB MEX
 *.mexa64

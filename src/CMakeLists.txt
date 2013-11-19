@@ -2,6 +2,9 @@
 # BUILD THE FISH DETECTOR FROM SOURCE
 # -----------------------------------------------
 
+set(SRC_FILES   ConfigFile.cpp 
+)
+
 set(LIBS        ${Boost_LIBRARIES}
                 ${OpenCV_LIBS}
                 ${PartsBasedDetector_LIBRARIES}

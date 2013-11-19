@@ -23,6 +23,8 @@
 #include "Rect3.hpp"
 #include "DistanceTransform.hpp"
 
+#include "ConfigFile.h"
+
 const double cv_pi = 3.141592653589;
 
 enum sendTo
@@ -240,10 +242,11 @@ int main(int argc, char * argv[])
   char key;
   cv::vector<int> num_classes;
 //  int matching_threshold = 88;
-  int matching_threshold_head = 90; //91
-  int matching_threshold_tail = 88; //89
-  int matching_threshold_fish = 79;
-  int nrCandidate = 3;
+  int matching_threshold_head = 91; //91
+  int matching_threshold_tail = 91; //89
+  int matching_threshold_fish = 70;
+  int nrCandidate = 5;
+  float boxFactor = 1.3;
   /// @todo Keys for changing these?
   cv::Size roi_size(100, 100);
 //  int learning_lower_bound = 90;
@@ -364,7 +367,8 @@ int main(int argc, char * argv[])
 
   // Timers
   Timer extract_timer;
-  Timer match_timer;
+  Timer matchLM_timer;
+  Timer matchPB_timer;
 
   // Initialize HighGUI
   help();
@@ -426,10 +430,11 @@ int main(int argc, char * argv[])
 	  cv::Mat display2 = color.clone();
 
 	  // detect potential candidates in the image
+	  matchPB_timer.start();
 	  std::vector<Candidate> candidates;
 	  pbd.detect(color, depth, candidates);
 	  printf("Number of candidates: %ld\n", candidates.size());
-
+	  matchPB_timer.stop();
 
 	  // display the best candidates
 	  Visualize visualize(model->name());
@@ -446,7 +451,7 @@ int main(int argc, char * argv[])
 	  // draw each candidate to the canvas
 	  cv::Mat maskPB;
 	  std::vector<cv::Rect> boundingBoxes;
-	  Candidate::mask(color, candidates, nrCandidate, 1.4, maskPB, boundingBoxes);
+	  Candidate::mask(color, candidates, nrCandidate, boxFactor, maskPB, boundingBoxes);
 	  std::vector<cv::Mat> maskLinemod;
 	  maskLinemod.push_back(255*maskPB);
 
@@ -457,7 +462,7 @@ int main(int argc, char * argv[])
 	  std::vector<std::string>  class_idsTail;
 	  std::vector<cv::Mat>  quantized_imagesHead;
 	  std::vector<cv::Mat>  quantized_imagesTail;
-	  match_timer.start();
+	  matchLM_timer.start();
 	  detHead->match(sources, (float)matching_threshold_head, matchesHead,
 			  class_idsHead, quantized_imagesHead, maskLinemod);
 	  detTail->match(sources, (float)matching_threshold_tail, matchesTail,
@@ -474,7 +479,7 @@ int main(int argc, char * argv[])
 	  quantized_images.push_back(quantized_imagesTail);
 
 //	  cv::Mat colored = displayQuantized(quantized_imagesHead[0]);
-	  match_timer.stop();
+	  matchLM_timer.stop();
 
 	  cv::vector<int> classes_visited;
 	  classes_visited.push_back(0);
@@ -507,8 +512,10 @@ int main(int argc, char * argv[])
 						  // Draw matching template
 						  const std::vector<cv::linemod::Template>& templatesHead = detHead->getTemplates(m.class_id, m.template_id);
 						  drawResponse(templatesHead, num_modalities, display, cv::Point(m.x, m.y), detHead->getT(0));
-						  drawBoxes(boundingBoxes, display, 0.76);
-						  cv::putText(display, m.class_id, cv::Point(m.x,m.y),
+						  drawBoxes(boundingBoxes, display, 1/boxFactor);
+						  std::ostringstream similarity;
+						  similarity << m.similarity;
+						  cv::putText(display, similarity.str(), cv::Point(m.x,m.y),
 								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
 					  }
 				  }
@@ -527,8 +534,10 @@ int main(int argc, char * argv[])
 						  // Draw matching template
 						  const std::vector<cv::linemod::Template>& templatesTail = detTail->getTemplates(m.class_id, m.template_id);
 						  drawResponse(templatesTail, num_modalities, display, cv::Point(m.x, m.y), detTail->getT(0));
-						  drawBoxes(boundingBoxes, display, 0.76);
-						  cv::putText(display, m.class_id, cv::Point(m.x,m.y),
+						  drawBoxes(boundingBoxes, display, 1/boxFactor);
+						  std::ostringstream similarity;
+						  similarity << m.similarity;
+						  cv::putText(display, similarity.str(), cv::Point(m.x,m.y),
 								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
 					  }
 				  }
@@ -569,7 +578,7 @@ int main(int argc, char * argv[])
 
 				  drawResponse(templatesHead, num_modalities, display2, cv::Point(mHead.x, mHead.y), detHead->getT(0));
 				  drawResponse(templatesTail, num_modalities, display2, cv::Point(mTail.x, mTail.y), detTail->getT(0));
-				  drawBoxes(boundingBoxes, display2, 0.76);
+				  drawBoxes(boundingBoxes, display2, 1/boxFactor);
 
 //				  cv::putText(display2, mHead.class_id, cv::Point(mHead.x,mHead.y),
 //						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
@@ -615,8 +624,9 @@ int main(int argc, char * argv[])
       printf("No matches found...\n");
     if (show_timings)
     {
-      printf("Training: %.2fs\n", extract_timer.time());
-      printf("Matching: %.2fs\n", match_timer.time());
+      printf("Training          : %.2fs\n", extract_timer.time());
+      printf("Matching PartBased: %.2fs\n", matchPB_timer.time());
+      printf("Matching LineMode : %.2fs\n", matchLM_timer.time());
     }
     if (show_match_result || show_timings)
       printf("------------------------------------------------------------\n");
@@ -751,7 +761,7 @@ static void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv
 
   for (int i = 0; i < (int)proj.size(); ++i)
   {
-    double Z = proj[i].z;
+    double Z  = proj[i].z;
     real[i].x = (proj[i].x - 320.) * (f_inv * Z);
     real[i].y = (proj[i].y - 240.) * (f_inv * Z);
     real[i].z = Z;
@@ -1185,7 +1195,7 @@ void drawBoxes(std::vector<cv::Rect>& boxes, cv::Mat& dst, const float factor)
 		cv::Rect box = boxes[n];
 		box.height *= factor;
 		box.width  *= factor;
-		//redefine upper left conner
+		//redefine upper left corner
 		box.y      += box.height*(1-factor)*0.5;
 		box.x      += box.width*(1-factor)*0.5;
 		cv::rectangle(dst, box, cv::Scalar(255, 0, 0), 2);
@@ -1302,7 +1312,7 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
     float angleR   = 130;  // angle between template RIGHT
     float dist_k   = 100;   // ref distance between template corners
     int   scale    = 3;
-    int   overlap_k  = 20;
+    int   overlap_k  = 50; //Ovelap between templates
     int   overlap[2];
 
     bool isFish    = false;
