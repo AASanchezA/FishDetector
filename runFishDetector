@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#script file for run Fishdetector code
+
 # Run this command to test template ( different data set)
 #src/FishDetector -tail ../LINE2D_DETECTOR/linemod_tail2510.yml -head ../LINE2D_DETECTOR/linemod_head2510.yml -model ~/kinect/pose-release-ver1.2/Trained/FISH3_final_55555.mat -fn ../LINE2D_DETECTOR/fishlisttest.yml
 #src/FishDetector -tail ../LINE2D_DETECTOR/linemod_tail2510.yml -head ../LINE2D_DETECTOR/linemod_head2510.yml -model ~/kinect/pose-release-ver1.2/Trained/FISH3_final_55555.mat -fn ../imagelistCreator/fishlist.yml
