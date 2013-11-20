@@ -118,6 +118,7 @@ find_library(PartsBasedDetector_LIBRARIES PartsBasedDetector PATHS ../PartsBased
 # add the main executable/library
 add_subdirectory(src)
 
+
 # add documentation
 #if(BUILD_DOC)
     #find_package(Doxygen)

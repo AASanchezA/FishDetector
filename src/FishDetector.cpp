@@ -27,6 +27,13 @@
 
 const double cv_pi = 3.141592653589;
 
+   ConfigFile config( "/Respaldo/BMC/Thesis/code/FishDetector/detector.conf" );
+//   int atoms = config.read<int>( "atoms" );
+//   double length = config.read( "length", 10.0 );
+//   string author, title;
+//   config.readInto( author, "name" );
+//   config.readInto( title, "title", string("Untitled") );
+
 enum sendTo
 {
 	NONE  = 0,
@@ -242,11 +249,13 @@ int main(int argc, char * argv[])
   char key;
   cv::vector<int> num_classes;
 //  int matching_threshold = 88;
-  int matching_threshold_head = 91; //91
-  int matching_threshold_tail = 91; //89
-  int matching_threshold_fish = 70;
-  int nrCandidate = 5;
-  float boxFactor = 1.3;
+  int matching_threshold_head = config.read<int>("matching_threshold_head");
+  int matching_threshold_tail = config.read<int>("matching_threshold_tail");
+  int matching_threshold_fish = config.read<int>("matching_threshold_fish");
+  int nrCandidate = config.read<int>("nrCandidate");
+  float boxFactor = config.read<int>("boxFactor");
+
+
   /// @todo Keys for changing these?
   cv::Size roi_size(100, 100);
 //  int learning_lower_bound = 90;
@@ -373,9 +382,10 @@ int main(int argc, char * argv[])
   // Initialize HighGUI
   help();
   cv::namedWindow("color");
-//  cv::namedWindow("normals");
   cv::namedWindow("connected");
-//  cv::namedWindow("display3");
+  cv::namedWindow("Mask");
+  cv::namedWindow("quantized");
+
   Mouse::start("color");
 
   //set video parameter
@@ -454,6 +464,9 @@ int main(int argc, char * argv[])
 	  Candidate::mask(color, candidates, nrCandidate, boxFactor, maskPB, boundingBoxes);
 	  std::vector<cv::Mat> maskLinemod;
 	  maskLinemod.push_back(255*maskPB);
+	  cv::Mat masked;
+	  color.copyTo(masked, maskLinemod[0]);
+	  cv::imshow("Mask", masked);
 
 	  // Perform matching
 	  std::vector<cv::linemod::Match>  matchesHead;
@@ -478,7 +491,8 @@ int main(int argc, char * argv[])
 	  quantized_images.push_back(quantized_imagesHead);
 	  quantized_images.push_back(quantized_imagesTail);
 
-//	  cv::Mat colored = displayQuantized(quantized_imagesHead[0]);
+	  cv::Mat colored = displayQuantized(quantized_imagesHead[0]);
+	  cv::imshow("quantized", colored);
 	  matchLM_timer.stop();
 
 	  cv::vector<int> classes_visited;
@@ -487,66 +501,6 @@ int main(int argc, char * argv[])
 
 	  std::set<std::string>  visitedHead;
 	  std::set<std::string>  visitedTail;
-
-	  if(show_matches)
-	  {
-		  for (int k = 0; k < 2; ++k)
-		  {
-//			  for (int i = 0; (i < (int)matches[k].size()) && (classes_visited[k] < num_classes[k]); ++i)
-			  for (int i = 0; (i < (int)matches[k].size()); ++i)
-			  {
-				  cv::linemod::Match m = matches[k][i];
-
-				  if (k == 0)
-				  {
-					  if (visitedHead.insert(m.class_id).second)
-					  {
-						  ++classes_visited[k];
-
-						  if (show_match_result)
-						  {
-							  printf("SimilarityHead: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
-									  m.similarity, m.x, m.y, m.class_id.c_str(), m.template_id);
-						  }
-
-						  // Draw matching template
-						  const std::vector<cv::linemod::Template>& templatesHead = detHead->getTemplates(m.class_id, m.template_id);
-						  drawResponse(templatesHead, num_modalities, display, cv::Point(m.x, m.y), detHead->getT(0));
-						  drawBoxes(boundingBoxes, display, 1/boxFactor);
-						  std::ostringstream similarity;
-						  similarity << m.similarity;
-						  cv::putText(display, similarity.str(), cv::Point(m.x,m.y),
-								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
-					  }
-				  }
-				  else if (k == 1)
-				  {
-					  if (visitedTail.insert(m.class_id).second)
-					  {
-						  ++classes_visited[k];
-
-						  if (show_match_result)
-						  {
-							  printf("SimilarityTail: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
-									  m.similarity, m.x, m.y, m.class_id.c_str(), m.template_id);
-						  }
-
-						  // Draw matching template
-						  const std::vector<cv::linemod::Template>& templatesTail = detTail->getTemplates(m.class_id, m.template_id);
-						  drawResponse(templatesTail, num_modalities, display, cv::Point(m.x, m.y), detTail->getT(0));
-						  drawBoxes(boundingBoxes, display, 1/boxFactor);
-						  std::ostringstream similarity;
-						  similarity << m.similarity;
-						  cv::putText(display, similarity.str(), cv::Point(m.x,m.y),
-								  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
-					  }
-				  }
-			  }
-			  //Reinit counter
-			  classes_visited[0] = 0;
-			  classes_visited[1] = 0;
-		  }
-	  }
 
 	  //Reinit counter
 	  classes_visited[0] = 0;
@@ -569,6 +523,28 @@ int main(int argc, char * argv[])
 			  const std::vector<cv::linemod::Template>& templatesHead = detHead->getTemplates(mHead.class_id, mHead.template_id);
 			  const std::vector<cv::linemod::Template>& templatesTail = detTail->getTemplates(mTail.class_id, mTail.template_id);
 
+			  if (show_match_result)
+			  {
+				  printf("SimilarityHead: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
+						  mHead.similarity, mHead.x, mHead.y, mHead.class_id.c_str(), mHead.template_id);
+				  printf("SimilarityTail: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
+						  mTail.similarity, mTail.x, mTail.y, mTail.class_id.c_str(), mTail.template_id);
+			  }
+
+			  // Draw matching template
+			  drawResponse(templatesHead, num_modalities, display, cv::Point(mHead.x, mHead.y), detTail->getT(0));
+			  drawResponse(templatesTail, num_modalities, display, cv::Point(mTail.x, mTail.y), detTail->getT(0));
+			  drawBoxes(boundingBoxes, display, 1/boxFactor);
+			  std::ostringstream similarity;
+			  similarity.precision(1);
+			  similarity << std::fixed << mHead.similarity;
+			  cv::putText(display, similarity.str(), cv::Point(mHead.x,mHead.y),
+					  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
+			  similarity << std::fixed << mTail.similarity;
+			  cv::putText(display, similarity.str(), cv::Point(mTail.x,mTail.y),
+					  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(0,0,250), 1, CV_AA);
+
+
 
 			  bool Fish = isFish(mHead, mTail, num_modalities, (float)matching_threshold_fish, display2, detHead, detTail);
 
@@ -586,6 +562,7 @@ int main(int argc, char * argv[])
 //						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
 
 
+				  printf("--------------Connected---------------------");
 				  printf("SimilarityHead: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
 						  mHead.similarity, mHead.x, mHead.y, mHead.class_id.c_str(), mHead.template_id);
 
@@ -1193,11 +1170,11 @@ void drawBoxes(std::vector<cv::Rect>& boxes, cv::Mat& dst, const float factor)
 	for (size_t n = 0; n < N; ++n)
 	{
 		cv::Rect box = boxes[n];
-		box.height *= factor;
-		box.width  *= factor;
 		//redefine upper left corner
 		box.y      += box.height*(1-factor)*0.5;
 		box.x      += box.width*(1-factor)*0.5;
+		box.height *= factor;
+		box.width  *= factor;
 		cv::rectangle(dst, box, cv::Scalar(255, 0, 0), 2);
 	}
 }
@@ -1308,11 +1285,11 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
     float F;
     float alpha[3] = {0.3, 0.3, 0.4};
     float Final;
-    float angleL   = 50;   // angle between template LEFT
-    float angleR   = 130;  // angle between template RIGHT
-    float dist_k   = 100;   // ref distance between template corners
-    int   scale    = 3;
-    int   overlap_k  = 50; //Ovelap between templates
+    float angleL   = config.read<float>("angleL");   // angle between template LEFT
+    float angleR   = config.read<float>("angleR");  // angle between template RIGHT
+    float dist_k   = config.read<float>("dist_k");   // ref distance between template corners
+    int   scale    = config.read<int>("scale");
+    int   overlap_k  = config.read<int>("overlap_k"); //Ovelap between templates
     int   overlap[2];
 
     bool isFish    = false;
