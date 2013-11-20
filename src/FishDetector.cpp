@@ -27,7 +27,7 @@
 
 const double cv_pi = 3.141592653589;
 
-   ConfigFile config( "/Respaldo/BMC/Thesis/code/FishDetector/detector.conf" );
+   ConfigFile config("detector.conf");
 //   int atoms = config.read<int>( "atoms" );
 //   double length = config.read( "length", 10.0 );
 //   string author, title;
@@ -562,7 +562,7 @@ int main(int argc, char * argv[])
 //						  cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,0,250), 1, CV_AA);
 
 
-				  printf("--------------Connected---------------------");
+				  printf("--------------Connected---------------------\n");
 				  printf("SimilarityHead: %5.1f%%; x: %3d; y: %3d; class: %s; template: %3d\n",
 						  mHead.similarity, mHead.x, mHead.y, mHead.class_id.c_str(), mHead.template_id);
 
@@ -1240,8 +1240,6 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
 			axis[i][j].x = (vertices[j].x + vertices[(j+1)%4].x)/2;
 			axis[i][j].y = (vertices[j].y + vertices[(j+1)%4].y)/2;
 		}
-//		cv::line(dst, axis[i][0], axis[i][2], cv::Scalar(255,0,0));
-//		cv::line(dst, axis[i][1], axis[i][3], cv::Scalar(255,0,0));
 
 	}
 
@@ -1279,16 +1277,20 @@ bool isFish(cv::linemod::Match& mHead, cv::linemod::Match& mTail, int num_modali
     int sideTail = findTemplateSide(contourTail, minElipse[1], minRect[1], dst, extrTail_h);
 
 
-
-    float omega[4] = {0.3, 0.1, 0.3, 0.3}; //omega parameter
+    float omega[4] = {	config.read<float>("omega0"), //Disntance between center of boundingboxes templates
+    					config.read<float>("omega1"), //Angle between templates
+    					config.read<float>("omega2"), //Distance between Upper extrem templates
+    					config.read<float>("omega2")}; //Distance between Lower extrem templates
     float f[4];
     float F;
-    float alpha[3] = {0.3, 0.3, 0.4};
+    float alpha[3] = {	config.read<float>("alpha0"), //Similarity Head Templates
+    					config.read<float>("alpha1"), //Similarity Tail Templates
+    					config.read<float>("alpha2")}; //Closeness between templates
     float Final;
     float angleL   = config.read<float>("angleL");   // angle between template LEFT
     float angleR   = config.read<float>("angleR");  // angle between template RIGHT
     float dist_k   = config.read<float>("dist_k");   // ref distance between template corners
-    int   scale    = config.read<int>("scale");
+    int   scale    = config.read<int>("scale");      //factor to define how many time the size of the template to check distance between template
     int   overlap_k  = config.read<int>("overlap_k"); //Ovelap between templates
     int   overlap[2];
 
