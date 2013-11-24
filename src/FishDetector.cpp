@@ -101,31 +101,31 @@ static void help()
 // Functions to store detector and templates in single XML/YAML file
 static cv::Ptr<cv::linemod::Detector> readLinemod(const std::string& filename)
 {
-  cv::Ptr<cv::linemod::Detector> detector = new cv::linemod::Detector;
-  cv::FileStorage fs(filename, cv::FileStorage::READ);
-  detector->read(fs.root());
+	cv::Ptr<cv::linemod::Detector> detector = new cv::linemod::Detector;
+	cv::FileStorage fs(filename, cv::FileStorage::READ);
+	detector->read(fs.root());
 
-  cv::FileNode fn = fs["classes"];
-  for (cv::FileNodeIterator i = fn.begin(), iend = fn.end(); i != iend; ++i)
-    detector->readClass(*i);
+	cv::FileNode fn = fs["classes"];
+	for (cv::FileNodeIterator i = fn.begin(), iend = fn.end(); i != iend; ++i)
+		detector->readClass(*i);
 
-  return detector;
+	return detector;
 }
 
 static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const std::string& filename)
 {
-  cv::FileStorage fs(filename, cv::FileStorage::WRITE);
-  detector->write(fs);
+	cv::FileStorage fs(filename, cv::FileStorage::WRITE);
+	detector->write(fs);
 
-  std::vector<std::string> ids = detector->classIds();
-  fs << "classes" << "[";
-  for (int i = 0; i < (int)ids.size(); ++i)
-  {
-    fs << "{";
-    detector->writeClass(ids[i], fs);
-    fs << "}"; // current class
-  }
-  fs << "]"; // classes
+	std::vector<std::string> ids = detector->classIds();
+	fs << "classes" << "[";
+	for (int i = 0; i < (int)ids.size(); ++i)
+	{
+		fs << "{";
+		detector->writeClass(ids[i], fs);
+		fs << "}"; // current class
+	}
+	fs << "]"; // classes
 }
 
 //hide the local functions in an unnamed namespace
@@ -733,16 +733,16 @@ int main(int argc, char * argv[])
 
 static void reprojectPoints(const std::vector<cv::Point3d>& proj, std::vector<cv::Point3d>& real, double f)
 {
-  real.resize(proj.size());
-  double f_inv = 1.0 / f;
+	real.resize(proj.size());
+	double f_inv = 1.0 / f;
 
-  for (int i = 0; i < (int)proj.size(); ++i)
-  {
-    double Z  = proj[i].z;
-    real[i].x = (proj[i].x - 320.) * (f_inv * Z);
-    real[i].y = (proj[i].y - 240.) * (f_inv * Z);
-    real[i].z = Z;
-  }
+	for (int i = 0; i < (int)proj.size(); ++i)
+	{
+		double Z  = proj[i].z;
+		real[i].x = (proj[i].x - 320.) * (f_inv * Z);
+		real[i].y = (proj[i].y - 240.) * (f_inv * Z);
+		real[i].z = Z;
+	}
 }
 
 
@@ -925,12 +925,12 @@ static void filterPlane(IplImage * ap_depth, std::vector<IplImage *> & a_masks, 
 
 void subtractPlane(const cv::Mat& depth, cv::Mat& mask, std::vector<CvPoint>& chain, double f)
 {
-  mask = cv::Mat::zeros(depth.size(), CV_8U);
-  std::vector<IplImage*> tmp;
-  IplImage mask_ipl = mask;
-  tmp.push_back(&mask_ipl);
-  IplImage depth_ipl = depth;
-  filterPlane(&depth_ipl, tmp, chain, f);
+	mask = cv::Mat::zeros(depth.size(), CV_8U);
+	std::vector<IplImage*> tmp;
+	IplImage mask_ipl = mask;
+	tmp.push_back(&mask_ipl);
+	IplImage depth_ipl = depth;
+	filterPlane(&depth_ipl, tmp, chain, f);
 }
 
 
@@ -939,7 +939,7 @@ void subtractPlaneSint(const cv::Mat& color, cv::Mat& mask)
 	//  cv::Mat bg(color.size(), CV_8UC3, cv::Scalar(64, 64, 64));
 	cv::Mat masktmp = cv::Mat::zeros(color.size(), CV_8U);
 	//  mask = cv::Mat::ones(color.size(), CV_8U)*255;
-	cv::copyMakeBorder(masktmp,masktmp,1,1,1,1,cv::BORDER_REPLICATE);
+	cv::copyMakeBorder(masktmp, masktmp, 1, 1, 1, 1, cv::BORDER_REPLICATE);
 
 	std::vector<cv::Mat> diffChannels;
 	cv::split(color, diffChannels);
@@ -947,7 +947,7 @@ void subtractPlaneSint(const cv::Mat& color, cv::Mat& mask)
 	cv::threshold(diffChannels[2], masktmp, 230, 255, CV_THRESH_BINARY);
 	mask = masktmp;
 	std::cout << "size mask = " << mask.cols << ", " << mask.rows << std::endl;
-	cv::namedWindow("diff",1);
+	cv::namedWindow("diff", 1);
 	cv::imshow("diff", masktmp);
 
 }
@@ -1084,23 +1084,23 @@ void templateConvexHull(const std::vector<cv::linemod::Template>& templates,
                         int num_modalities, cv::Point offset, cv::Size size,
                         cv::Mat& dst)
 {
-  std::vector<cv::Point> points;
-  for (int m = 0; m < num_modalities; ++m)
-  {
-    for (int i = 0; i < (int)templates[m].features.size(); ++i)
-    {
-      cv::linemod::Feature f = templates[m].features[i];
-      points.push_back(cv::Point(f.x, f.y) + offset);
-    }
-  }
+	std::vector<cv::Point> points;
+	for (int m = 0; m < num_modalities; ++m)
+	{
+		for (int i = 0; i < (int)templates[m].features.size(); ++i)
+		{
+			cv::linemod::Feature f = templates[m].features[i];
+			points.push_back(cv::Point(f.x, f.y) + offset);
+		}
+	}
 
-  std::vector<cv::Point> hull;
-  cv::convexHull(points, hull);
+	std::vector<cv::Point> hull;
+	cv::convexHull(points, hull);
 
-  dst = cv::Mat::zeros(size, CV_8U);
-  const int hull_count = (int)hull.size();
-  const cv::Point* hull_pts = &hull[0];
-  cv::fillPoly(dst, &hull_pts, &hull_count, 1, cv::Scalar(255));
+	dst = cv::Mat::zeros(size, CV_8U);
+	const int hull_count = (int)hull.size();
+	const cv::Point* hull_pts = &hull[0];
+	cv::fillPoly(dst, &hull_pts, &hull_count, 1, cv::Scalar(255));
 //  cv::namedWindow("grabcut");
 //  cv::imshow("grabcut", dst);
 }
@@ -1114,13 +1114,14 @@ void drawResponse(const std::vector<cv::linemod::Template>& templates,
 
 	static int index = 0;
 	static const cv::Scalar COLORS[8] = { CV_RGB(0  , 0  , 255),
-											CV_RGB(0  , 255, 0  ),
-											CV_RGB(255, 255, 0  ),
-											CV_RGB(255, 140, 0  ),
-											CV_RGB(255, 0  , 0  ),
-											CV_RGB(255, 0  , 255),
-											CV_RGB(0  , 0  , 0  ),
-											CV_RGB(200, 100, 255) };
+	                                      CV_RGB(0  , 255, 0  ),
+	                                      CV_RGB(255, 255, 0  ),
+	                                      CV_RGB(255, 140, 0  ),
+	                                      CV_RGB(255, 0  , 0  ),
+	                                      CV_RGB(255, 0  , 255),
+	                                      CV_RGB(0  , 0  , 0  ),
+	                                      CV_RGB(200, 100, 255)
+	                                    };
 
 	// Countors and rotatedRect to save fit ellipse for template
 	cv::RotatedRect minEllipse;
@@ -1133,7 +1134,7 @@ void drawResponse(const std::vector<cv::linemod::Template>& templates,
 	{
 		for (int i = 0; i < (int)templates[m].features.size(); ++i)
 		{
-			index = index > 4? (index % 5) : index;
+			index = index > 4 ? (index % 5) : index;
 			cv::linemod::Feature f = templates[m].features[i];
 			cv::Point pt(f.x + offset.x, f.y + offset.y);
 			//      cv::circle(dst, pt, T / 2, color);
@@ -1154,12 +1155,12 @@ void drawResponse(const std::vector<cv::linemod::Template>& templates,
 	for (int i = 0; i < 4; i++)
 	{
 //		cv::line(dst, vertices[i], vertices[(i+1)%4], cv::Scalar(0,255,0));
-		axis[i].x = (vertices[i].x + vertices[(i+1)%4].x)/2;
-		axis[i].y = (vertices[i].y + vertices[(i+1)%4].y)/2;
+		axis[i].x = (vertices[i].x + vertices[(i + 1) % 4].x) / 2;
+		axis[i].y = (vertices[i].y + vertices[(i + 1) % 4].y) / 2;
 	}
 
 //	cv::line(dst, axis[0], axis[2], cv::Scalar(255,0,0));
-	cv::line(dst, axis[1], axis[3], cv::Scalar(255,0,0));
+	cv::line(dst, axis[1], axis[3], cv::Scalar(255, 0, 0));
 	index++;
 }
 
@@ -1171,8 +1172,8 @@ void drawBoxes(std::vector<cv::Rect>& boxes, cv::Mat& dst, const float factor)
 	{
 		cv::Rect box = boxes[n];
 		//redefine upper left corner
-		box.y      += box.height*(1-factor)*0.5;
-		box.x      += box.width*(1-factor)*0.5;
+		box.y      += box.height * (1 - factor) * 0.5;
+		box.x      += box.width * (1 - factor) * 0.5;
 		box.height *= factor;
 		box.width  *= factor;
 		cv::rectangle(dst, box, cv::Scalar(255, 0, 0), 2);
@@ -1576,30 +1577,30 @@ int findTemplateSide(cv::vector<cv::Point> contour, cv::RotatedRect elipse, cv::
 
 
  //Calculate spring equation with acceleration equal 0
- double springEq(cv::Point pt_1, cv::Point pt_2, cv::Vec2d& speed, double& teta)
- {
-	 double magSpeed;
-	 const double k = 1; // spring const
-	 const double b = 1; // damping const
-	 const double R = 10; // rest lenght spring
+double springEq(cv::Point pt_1, cv::Point pt_2, cv::Vec2d& speed, double& teta)
+{
+	double magSpeed;
+	const double k = 1; // spring const
+	const double b = 1; // damping const
+	const double R = 10; // rest lenght spring
 
-	 double L = cv::norm(cv::Mat(pt_1), cv::Mat(pt_2), cv::NORM_L2);
-	 double S = L - R;
-	 double sin_teta = (pt_2.x - pt_1.x)/L;
-	 double cos_teta = (pt_2.y - pt_1.y)/L;
+	double L = cv::norm(cv::Mat(pt_1), cv::Mat(pt_2), cv::NORM_L2);
+	double S = L - R;
+	double sin_teta = (pt_2.x - pt_1.x) / L;
+	double cos_teta = (pt_2.y - pt_1.y) / L;
 
-	 double tetarad = (pt_2.x - pt_1.x) == 0? 0 : atan((pt_2.y - pt_1.y)/(pt_2.x - pt_1.x));
+	double tetarad = (pt_2.x - pt_1.x) == 0 ? 0 : atan((pt_2.y - pt_1.y) / (pt_2.x - pt_1.x));
 //	 double tetarad = atan2 ((pt_2.y - pt_1.y),(pt_2.x - pt_1.x));
-	 teta = tetarad * 180 / cv_pi;
+	teta = tetarad * 180 / cv_pi;
 //	 printf ("The arc tangent for (x=%f, y=%f) is %f degrees\n", (pt_2.x - pt_1.x), (pt_2.x - pt_1.x), tetadeg );
 
-	 speed.val[0] = -1*(k/b)*S*sin_teta;
-	 speed.val[1] = -1*(k/b)*S*cos_teta;
+	speed.val[0] = -1 * (k / b) * S * sin_teta;
+	speed.val[1] = -1 * (k / b) * S * cos_teta;
 
-	 magSpeed = cv::norm(speed, cv::NORM_L2);
+	magSpeed = cv::norm(speed, cv::NORM_L2);
 
-	 return magSpeed;
- }
+	return magSpeed;
+}
 
 
  cv::Mat display3(std::vector<cv::Mat>& images)
