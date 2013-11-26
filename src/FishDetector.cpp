@@ -130,106 +130,41 @@ static void writeLinemod(const cv::Ptr<cv::linemod::Detector>& detector, const s
 
 //hide the local functions in an unnamed namespace
 namespace
+
 {
-void helpread(char** av)
-{
-	std::cout
-			<< "\nThis program gets you started being able to read images from a list in a file\n"
-					"Usage:\n./" << av[0] << " image_list.yaml\n"
-			<< "\tThis is a starter sample, to get you up and going in a copy pasta fashion.\n"
-			<< "\tThe program reads in an list of images from a yaml or xml file and displays\n"
-			<< "one at a time\n"
-			<< "\tTry running imagelist_creator to generate a list of images.\n"
-					"Using OpenCV version %s\n" << CV_VERSION << "\n"
-				"\t-lm follow by template file name.\n"
-				"\t-fn follow by list image filename.\n"	<< std::endl;
+	void helpread(char** av)
+	{
+		std::cout
+		        << "\nThis program gets you started being able to read images from a list in a file\n"
+		"Usage:\n./" << av[0] << " image_list.yaml\n"
+		<< "\tThis is a starter sample, to get you up and going in a copy pasta fashion.\n"
+		<< "\tThe program reads in an list of images from a yaml or xml file and displays\n"
+		<< "one at a time\n"
+		<< "\tTry running imagelist_creator to generate a list of images.\n"
+		"Using OpenCV version %s\n" << CV_VERSION << "\n"
+		"\t-lm follow by template file name.\n"
+		"\t-fn follow by list image filename.\n"    << std::endl;
+	}
+
+	bool readStringList(const std::string& filename, std::vector<std::string>& l)
+	{
+		l.resize(0);
+		cv::FileStorage fs(filename, cv::FileStorage::READ);
+		if (!fs.isOpened())
+			return false;
+		cv::FileNode n = fs.getFirstTopLevelNode();
+		if (n.type() != cv::FileNode::SEQ)
+			return false;
+		cv::FileNodeIterator it = n.begin(), it_end = n.end();
+		for (; it != it_end; ++it)
+			l.push_back((std::string) *it);
+		return true;
+	}
 }
-
-bool readStringList(const std::string& filename, std::vector<std::string>& l)
-{
-	l.resize(0);
-	cv::FileStorage fs(filename, cv::FileStorage::READ);
-	if (!fs.isOpened())
-		return false;
-	cv::FileNode n = fs.getFirstTopLevelNode();
-	if (n.type() != cv::FileNode::SEQ)
-		return false;
-	cv::FileNodeIterator it = n.begin(), it_end = n.end();
-	for (; it != it_end; ++it)
-		l.push_back((std::string) *it);
-	return true;
-}
-}
-
-// Copy of cv_mouse from cv_utilities
-class Mouse
-{
-public:
-	static void start(const std::string& a_img_name)
-	{
-		cvSetMouseCallback(a_img_name.c_str(), Mouse::cv_on_mouse, 0);
-	}
-	static int event(void)
-	{
-		int l_event = m_event;
-		m_event = -1;
-		return l_event;
-	}
-	static int x(void)
-	{
-		return m_x;
-	}
-	static int y(void)
-	{
-		return m_y;
-	}
-
-private:
-	static void cv_on_mouse(int a_event, int a_x, int a_y, int, void *)
-	{
-		m_event = a_event;
-		m_x = a_x;
-		m_y = a_y;
-	}
-
-	static int m_event;
-	static int m_x;
-	static int m_y;
-};
 
 int Mouse::m_event;
 int Mouse::m_x;
 int Mouse::m_y;
-
-// Adapted from cv_timer in cv_utilities
-class Timer
-{
-public:
-	Timer() : start_(0), time_(0) {}
-
-	void start()
-	{
-		start_ = cv::getTickCount();
-	}
-
-	void stop()
-	{
-		CV_Assert(start_ != 0);
-		int64 end = cv::getTickCount();
-		time_ += end - start_;
-		start_ = 0;
-	}
-
-	double time()
-	{
-		double ret = time_ / cv::getTickFrequency();
-		time_ = 0;
-		return ret;
-	}
-
-private:
-	int64 start_, time_;
-};
 
 
 
@@ -237,13 +172,13 @@ int main(int argc, char * argv[])
 {
   // Various settings and flags
   bool show_match_result = true;
-  bool show_timings = true;
-  bool show_matches = true;
-  bool learn_online = false;
-  bool savedlmHead = false;
-  bool savedlmTail = false;
-  bool delaying = false;
-  bool press_key_a = false;
+  bool show_timings      = true;
+  bool show_matches      = true;
+  bool learn_online      = false;
+  bool savedlmHead       = false;
+  bool savedlmTail       = false;
+  bool delaying          = false;
+  bool press_key_a       = false;
 //  bool maskloaded = false;
 //  int maskside = NONE;
   char key;
@@ -252,8 +187,8 @@ int main(int argc, char * argv[])
   int matching_threshold_head = config.read<int>("matching_threshold_head");
   int matching_threshold_tail = config.read<int>("matching_threshold_tail");
   int matching_threshold_fish = config.read<int>("matching_threshold_fish");
-  int nrCandidate = config.read<int>("nrCandidate");
-  float boxFactor = config.read<int>("boxFactor");
+  int nrCandidate             = config.read<int>("nrCandidate");
+  float boxFactor             = config.read<int>("boxFactor");
 
 
   /// @todo Keys for changing these?
@@ -450,7 +385,8 @@ int main(int argc, char * argv[])
 	  Visualize visualize(model->name());
 	  SearchSpacePruning<float> ssp;
 	  cv::Mat canvas;
-	  if (candidates.size() > 0) {
+	  if (candidates.size() > 0)
+	  {
 		  Candidate::sort(candidates);
 		  Candidate::nonMaximaSuppression(color, candidates, 0.3);
 		  visualize.candidates(color, candidates, nrCandidate, 1,canvas, true);
@@ -469,12 +405,12 @@ int main(int argc, char * argv[])
 	  cv::imshow("Mask", masked);
 
 	  // Perform matching
-	  std::vector<cv::linemod::Match>  matchesHead;
-	  std::vector<cv::linemod::Match>  matchesTail;
-	  std::vector<std::string>  class_idsHead;
-	  std::vector<std::string>  class_idsTail;
-	  std::vector<cv::Mat>  quantized_imagesHead;
-	  std::vector<cv::Mat>  quantized_imagesTail;
+	  std::vector< cv::linemod::Match > matchesHead;
+	  std::vector< cv::linemod::Match > matchesTail;
+	  std::vector< std::string        > class_idsHead;
+	  std::vector< std::string        > class_idsTail;
+	  std::vector< cv::Mat            > quantized_imagesHead;
+	  std::vector< cv::Mat            > quantized_imagesTail;
 	  matchLM_timer.start();
 	  detHead->match(sources, (float)matching_threshold_head, matchesHead,
 			  class_idsHead, quantized_imagesHead, maskLinemod);
