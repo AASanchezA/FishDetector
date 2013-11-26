@@ -3,10 +3,8 @@
 #define TIMER_HPP
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <cstdio>
 #include <iostream>
-#include <vector>
 
 // Adapted from cv_timer in cv_utilities
 class Timer

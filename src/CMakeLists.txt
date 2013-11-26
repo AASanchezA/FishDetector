@@ -3,6 +3,7 @@
 # -----------------------------------------------
 
 set(SRC_FILES   ConfigFile.cpp 
+                functions.cpp
 )
 
 set(LIBS        ${Boost_LIBRARIES}

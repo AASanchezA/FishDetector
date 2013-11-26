@@ -4,10 +4,8 @@
 #define MOUSE_HPP
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <cstdio>
 #include <iostream>
-#include <vector>
 
 // Copy of cv_mouse from cv_utilities
 class Mouse
