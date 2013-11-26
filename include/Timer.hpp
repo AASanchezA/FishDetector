@@ -1,5 +1,6 @@
 //Timer Class used to measure process time
-
+#ifndef TIMER_HPP
+#define TIMER_HPP
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -36,3 +37,4 @@ public:
 private:
 	int64 start_, time_;
 };
+#endif
