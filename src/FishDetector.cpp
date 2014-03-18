@@ -390,10 +390,16 @@ int main(int argc, char * argv[])
 	  classes_visited[1] = 0;
 
 	  // go through all head matches, and connecting  head-tail
-	  for (int i = 0; (i < (int)matches[0].size()); ++i)
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+for (int i = 0; (i < (int)matches[0].size()); ++i)
 	  {
 		  ++classes_visited[0];
 		  //go through all Tail matches
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
 		  for (int j = 0; (j < (int)matches[1].size()); ++j)
 		  {
 			  ++classes_visited[1];

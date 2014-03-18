@@ -45,7 +45,7 @@ install_manifest.txt
 *.mexa64
 
 #MAT file
-*.mat
+#*.mat
 
 #Eclipse
 .cproject
