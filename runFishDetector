@@ -7,5 +7,6 @@
 #src/FishDetector -tail ../LINE2D_DETECTOR/linemod_tail2510.yml -head ../LINE2D_DETECTOR/linemod_head2510.yml -model ~/kinect/pose-release-ver1.2/Trained/FISH3_final_55555.mat -fn ../imagelistCreator/fishlist.yml
 #src/FishDetector -tail ../LINE2D_DETECTOR/linemod_tail2510.yml -head /Respaldo/FishscanData/LineRama/training/head/mask/linemod_head.yml -model ~/kinect/pose-release-ver1.2/Trained/FISH3_final_55555.mat -fn ../imagelistCreator/fishlist.yml
 #src/FishDetector -tail linemod_tail1811.yml  -head linemod_head1811.yml -model ~/kinect/pose-release-ver1.2/Trained/FISH3_final_55555.mat -fn ../imagelistCreator/fishlist.yml
+#src/FishDetector -tail linemod_tail1811.yml  -head linemod_head1811.yml -model Trained/FISH713200_final_5555555555555.mat  -fn ../imagelistCreator/fishlist.yml
 src/FishDetector -tail linemod_tail1811.yml  -head linemod_head1811.yml -model Trained/FISH35_final_55555.mat -fn ../imagelistCreator/fishlist.yml
 

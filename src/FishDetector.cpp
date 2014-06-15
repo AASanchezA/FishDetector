@@ -309,10 +309,10 @@ int main(int argc, char * argv[])
 	  cv::Mat_<float> depth; //Added for PartBasesModel
 
 	  //Resize image to limite process time
-	  if((test.rows > 480) || (test.cols > 640) )
-	  {
-		  cv::resize(test, test, cv::Size(640,480));
-	  }
+//	  if((test.rows > 480) || (test.cols > 640) )
+//	  {
+//		  cv::resize(test, test, cv::Size(640,480));
+//	  }
 
 	  color = test.clone();
 
