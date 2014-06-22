@@ -3,6 +3,9 @@
 #include <cstdio>
 #include <iostream>
 #include <vector>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
 
 #include <boost/filesystem.hpp>
 #include <cstdio>
@@ -264,6 +267,7 @@ int main(int argc, char * argv[])
   // Initialize HighGUI
   help();
   cv::namedWindow("color");
+  cv::namedWindow("sunday");
   cv::namedWindow("connected");
   cv::namedWindow("Mask");
   cv::namedWindow("quantized");
@@ -309,11 +313,12 @@ int main(int argc, char * argv[])
 	  cv::Mat_<float> depth; //Added for PartBasesModel
 
 	  //Resize image to limite process time
-//	  if((test.rows > 480) || (test.cols > 640) )
-//	  {
-//		  cv::resize(test, test, cv::Size(640,480));
-//	  }
+	  if((test.rows > 480) || (test.cols > 640) )
+	  {
+		  cv::resize(test, test, cv::Size(640,480));
+	  }
 
+	  cv::imshow("sunday", test);
 	  color = test.clone();
 
 	  std::vector<cv::Mat> sources;
